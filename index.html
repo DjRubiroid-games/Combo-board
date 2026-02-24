@@ -230,6 +230,88 @@
             background: #f472b6;
             box-shadow: 0 0 5px #f472b6;
         }
+
+        /* --- Стили для модалок и библиотеки --- */
+        .secondary {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--court-bg);
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.2);
+            color: white;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .combo-list {
+            max-height: 250px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .combo-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s;
+        }
+
+        .combo-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .combo-title {
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .combo-author {
+            font-size: 0.75rem;
+            color: var(--lines);
+            margin-top: 4px;
+        }
     </style>
 </head>
 
@@ -274,6 +356,31 @@
         <button id="resetBtn">Сброс</button>
         <button id="saveBtn" class="primary">📌 Шаг</button>
         <button id="playBtn" class="play-btn" disabled>▶️ Плей</button>
+    </div>
+    <div class="toolbar secondary">
+        <button id="saveCloudBtn" style="background: rgba(139, 92, 246, 0.8);">☁️ Сохранить для команды</button>
+        <button id="loadCloudBtn" style="background: rgba(59, 130, 246, 0.8);">📂 Библиотека</button>
+    </div>
+
+    <!-- Модалки -->
+    <div id="saveModal" class="modal">
+        <div class="modal-content">
+            <h3>Сохранить комбинацию</h3>
+            <input type="text" id="comboName" placeholder="Название (например, Пик-н-ролл)">
+            <div style="display: flex; gap: 10px;">
+                <button id="confirmSaveBtn" class="primary">Сохранить</button>
+                <button onclick="document.getElementById('saveModal').style.display='none'">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadModal" class="modal">
+        <div class="modal-content">
+            <h3>Библиотека команды</h3>
+            <div id="comboList" class="combo-list">Загрузка...</div>
+            <button onclick="document.getElementById('loadModal').style.display='none'"
+                style="width: 100%;">Закрыть</button>
+        </div>
     </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -470,6 +577,99 @@
 
         // Инициализация при старте
         initBoard();
+
+        // --- Облачное сохранение (БД) ---
+        const LOCAL_API_URL = 'http://localhost:3000/api/combos';
+        // Позже здесь будет ссылка на Render (или мы будем использовать относительный путь)
+        const REMOTE_API_URL = '/api/combos';
+
+        const saveCloudBtn = document.getElementById('saveCloudBtn');
+        const loadCloudBtn = document.getElementById('loadCloudBtn');
+        const saveModal = document.getElementById('saveModal');
+        const loadModal = document.getElementById('loadModal');
+        const comboNameInput = document.getElementById('comboName');
+        const comboListDiv = document.getElementById('comboList');
+
+        saveCloudBtn.addEventListener('click', () => {
+            if (frames.length <= 1) return alert('Сначала нарисуйте и сохраните хотя бы один шаг на доске (кнопка 📌 Шаг)!');
+            saveModal.style.display = 'flex';
+        });
+
+        loadCloudBtn.addEventListener('click', async () => {
+            loadModal.style.display = 'flex';
+            comboListDiv.innerHTML = 'Загрузка комбинаций...';
+
+            // Если запущен локальный файл в браузере с file://, стучимся к localhost. 
+            // Иначе (когда задеплоим на Render) используем относительный путь
+            const fetchUrl = window.location.protocol === 'file:' ? LOCAL_API_URL : REMOTE_API_URL;
+
+            try {
+                const res = await fetch(fetchUrl);
+                const data = await res.json();
+
+                if (data.success) {
+                    comboListDiv.innerHTML = '';
+                    if (data.combos.length === 0) {
+                        comboListDiv.innerHTML = 'Библиотека пока пуста.';
+                        return;
+                    }
+                    data.combos.forEach(c => {
+                        const div = document.createElement('div');
+                        div.className = 'combo-item';
+                        div.innerHTML = `<div><div class="combo-title">${c.name}</div><div class="combo-author">От: ${c.author}</div></div>`;
+                        div.onclick = () => {
+                            frames = c.frames;
+                            updateUI();
+                            loadModal.style.display = 'none';
+                            applyFrame(0); // Показываем первую позицию комбинации
+                        };
+                        comboListDiv.appendChild(div);
+                    });
+                }
+            } catch (e) {
+                comboListDiv.innerHTML = '<div style="color: #fca5a5; font-size: 0.9rem; padding:10px;">Бэкенд пока не подключён. Ждем базу данных!</div>';
+            }
+        });
+
+        document.getElementById('confirmSaveBtn').addEventListener('click', async () => {
+            const name = comboNameInput.value.trim();
+            if (!name) return alert('Введите название комбинации!');
+
+            // Получаем имя из Telegram WebApp
+            let author = 'Тренер';
+            if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                author = tg.initDataUnsafe.user.first_name || "Игрок";
+            }
+
+            const btn = document.getElementById('confirmSaveBtn');
+            btn.innerText = 'Сохранение...';
+            btn.disabled = true;
+
+            const fetchUrl = window.location.protocol === 'file:' ? LOCAL_API_URL : REMOTE_API_URL;
+
+            try {
+                const res = await fetch(fetchUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, author, frames })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    saveModal.style.display = 'none';
+                    comboNameInput.value = '';
+                    alert('Комбинация успешно отправлена в библиотеку!');
+                } else {
+                    alert('Ошибка на сервере при сохранении.');
+                }
+            } catch (e) {
+                alert('База данных ещё не подключена! Вы сможете сохранять схемы, как только мы завершим настройку сервера.');
+                saveModal.style.display = 'none';
+            } finally {
+                btn.innerText = 'Сохранить';
+                btn.disabled = false;
+            }
+        });
 
     </script>
 </body>
