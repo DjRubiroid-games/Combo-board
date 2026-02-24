@@ -49,6 +49,7 @@
             font-size: 1.2rem;
             background: linear-gradient(to right, #818cf8, #f472b6);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 800;
         }
@@ -275,7 +276,18 @@
         <button id="playBtn" class="play-btn" disabled>▶️ Плей</button>
     </div>
 
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+        // Telegram Mini App Initialization
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран
+        tg.ready();  // Сообщаем телеграму, что приложение готово
+
+        // Применяем цвета темы Telegram (опционально)
+        if (tg.themeParams.bg_color) {
+            document.documentElement.style.setProperty('--bg', tg.themeParams.bg_color);
+        }
+
         const board = document.getElementById('board');
         const playBtn = document.getElementById('playBtn');
         const dotsContainer = document.getElementById('dotsContainer');
