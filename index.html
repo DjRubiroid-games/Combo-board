@@ -401,17 +401,17 @@
         const timelineInfo = document.getElementById('timelineInfo');
 
         const startPositions = {
-            teamA: [
-                { id: 'a1', num: 1, x: 20, y: 70 }, { id: 'a2', num: 2, x: 80, y: 70 },
-                { id: 'a3', num: 3, x: 25, y: 35 }, { id: 'a4', num: 4, x: 75, y: 35 },
-                { id: 'a5', num: 5, x: 50, y: 55 }
+            teamA: [ // Белые (защита)
+                { id: 'a1', num: 1, x: 50, y: 55 }, { id: 'a2', num: 2, x: 78, y: 40 },
+                { id: 'a3', num: 3, x: 20, y: 38 }, { id: 'a4', num: 4, x: 75, y: 10 },
+                { id: 'a5', num: 5, x: 28, y: 10 }
             ],
-            teamB: [
-                { id: 'b1', num: 1, x: 20, y: 80 }, { id: 'b2', num: 2, x: 80, y: 80 },
-                { id: 'b3', num: 3, x: 30, y: 45 }, { id: 'b4', num: 4, x: 70, y: 45 },
-                { id: 'b5', num: 5, x: 50, y: 65 }
+            teamB: [ // Темно-синие (нападение)
+                { id: 'b1', num: 1, x: 50, y: 65 }, { id: 'b2', num: 2, x: 85, y: 50 },
+                { id: 'b3', num: 3, x: 15, y: 50 }, { id: 'b4', num: 4, x: 92, y: 10 },
+                { id: 'b5', num: 5, x: 30, y: 20 }
             ],
-            ball: { id: 'ball', x: 50, y: 75 }
+            ball: { id: 'ball', x: 54, y: 66 }
         };
 
         let frames = []; // Массив сохраненных кадров
