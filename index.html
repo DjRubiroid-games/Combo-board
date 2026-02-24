@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TacBoard / Game Dream</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --court-bg: #1e293b;
+            --lines: #94a3b8;
+            --paint-bg: rgba(148, 163, 184, 0.08);
+            --accent: #f472b6;
+            --team-a: #ffffff;
+            --team-b: #0f172a;
+            --team-b-border: #94a3b8;
+            --ball: #f97316;
+            --timeline-bg: rgba(30, 41, 59, 0.9);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 1rem;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            background: linear-gradient(to right, #818cf8, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+
+        .board-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            position: relative;
+        }
+
+        #board {
+            width: 100%;
+            max-width: 500px;
+            aspect-ratio: 15 / 14;
+            background-color: var(--court-bg);
+            position: relative;
+            overflow: hidden;
+            border-radius: 4px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            touch-action: none;
+        }
+
+        #court-svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .entity {
+            position: absolute;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: grab;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: left 0.5s ease-in-out, top 0.5s ease-in-out, transform 0.1s;
+            z-index: 100;
+            transform: translate(-50%, -50%);
+        }
+
+        .entity.dragging {
+            transition: none !important;
+            /* Убираем анимацию при перетаскивании */
+        }
+
+        .entity:active {
+            cursor: grabbing;
+            transform: translate(-50%, -50%) scale(1.15);
+            z-index: 1000 !important;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .team-a {
+            background: var(--team-a);
+            color: var(--team-b);
+            border: 2px solid #ccc;
+        }
+
+        .team-b {
+            background: var(--team-b);
+            color: var(--team-a);
+            border: 2px solid var(--team-b-border);
+        }
+
+        .ball {
+            width: 22px;
+            height: 22px;
+            background: var(--ball);
+            border: 1px solid #7c2d12;
+            background-image: radial-gradient(circle at 30% 30%, #fb923c, #ea580c);
+            z-index: 110;
+            font-size: 0;
+        }
+
+        .toolbar {
+            padding: 1rem;
+            background: var(--timeline-bg);
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .timeline-info {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .timeline-info.visible {
+            opacity: 1;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 12px 10px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button.primary {
+            background: #818cf8;
+            color: white;
+            border: none;
+        }
+
+        button.primary:hover {
+            background: #6366f1;
+        }
+
+        button.play-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+        }
+
+        button.play-btn:hover {
+            background: #059669;
+        }
+
+        button.play-btn:disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .timeline-dots {
+            display: flex;
+            gap: 5px;
+            position: absolute;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: background 0.3s;
+        }
+
+        .dot.active {
+            background: #f472b6;
+            box-shadow: 0 0 5px #f472b6;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>TacBoard</h1>
+    </header>
+
+    <div class="board-container">
+        <div id="board">
+            <svg id="court-svg" viewBox="0 0 150 140" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0" y="0" width="150" height="140" fill="none" class="court-line" />
+                <rect x="50.5" y="0" width="49" height="58" fill="var(--paint-bg)" class="court-line" />
+                <path d="M 57 58 A 18 18 0 0 0 93 58" fill="none" class="court-line" />
+                <path d="M 57 58 A 18 18 0 0 1 93 58" fill="none" class="court-line court-dashed" />
+                <line x1="9" y1="0" x2="9" y2="30" class="court-line" />
+                <line x1="141" y1="0" x2="141" y2="30" class="court-line" />
+                <path d="M 9 30 A 67.5 67.5 0 0 0 141 30" fill="none" class="court-line" />
+                <line x1="66" y1="12" x2="84" y2="12" stroke="var(--accent)" stroke-width="2" />
+                <circle cx="75" cy="15.75" r="2.25" fill="none" stroke="var(--ball)" stroke-width="1.2" />
+                <path d="M 62.5 15.75 A 12.5 12.5 0 0 0 87.5 15.75" fill="none" class="court-line" />
+
+                <style>
+                    .court-line {
+                        stroke: var(--lines);
+                        stroke-width: 1.5;
+                        vector-effect: non-scaling-stroke;
+                    }
+
+                    .court-dashed {
+                        stroke-dasharray: 4, 3;
+                    }
+                </style>
+            </svg>
+        </div>
+        <div class="timeline-dots" id="dotsContainer"></div>
+        <div class="timeline-info" id="timelineInfo">Кадр 1/1</div>
+    </div>
+
+    <div class="toolbar">
+        <button id="resetBtn">Сброс</button>
+        <button id="saveBtn" class="primary">📌 Шаг</button>
+        <button id="playBtn" class="play-btn" disabled>▶️ Плей</button>
+    </div>
+
+    <script>
+        const board = document.getElementById('board');
+        const playBtn = document.getElementById('playBtn');
+        const dotsContainer = document.getElementById('dotsContainer');
+        const timelineInfo = document.getElementById('timelineInfo');
+
+        const startPositions = {
+            teamA: [
+                { id: 'a1', num: 1, x: 20, y: 70 }, { id: 'a2', num: 2, x: 80, y: 70 },
+                { id: 'a3', num: 3, x: 25, y: 35 }, { id: 'a4', num: 4, x: 75, y: 35 },
+                { id: 'a5', num: 5, x: 50, y: 55 }
+            ],
+            teamB: [
+                { id: 'b1', num: 1, x: 20, y: 80 }, { id: 'b2', num: 2, x: 80, y: 80 },
+                { id: 'b3', num: 3, x: 30, y: 45 }, { id: 'b4', num: 4, x: 70, y: 45 },
+                { id: 'b5', num: 5, x: 50, y: 65 }
+            ],
+            ball: { id: 'ball', x: 50, y: 75 }
+        };
+
+        let frames = []; // Массив сохраненных кадров
+        let isPlaying = false;
+
+        function createEntity(data, className) {
+            const el = document.createElement('div');
+            el.className = `entity ${className}`;
+            el.id = data.id;
+            if (data.num && !className.includes('ball')) el.innerText = data.num;
+
+            el.style.left = `${data.x}%`;
+            el.style.top = `${data.y}%`;
+
+            board.appendChild(el);
+            return el;
+        }
+
+        function initBoard() {
+            document.querySelectorAll('.entity').forEach(el => el.remove());
+            startPositions.teamA.forEach(p => createEntity(p, 'team-a'));
+            startPositions.teamB.forEach(p => createEntity(p, 'team-b'));
+            createEntity(startPositions.ball, 'ball');
+
+            // Сбрасываем таймлайн
+            saveCurrentStateAsFrame(true);
+        }
+
+        // --- Таймлайн Логика ---
+
+        function getCurrentState() {
+            const state = [];
+            document.querySelectorAll('.entity').forEach(el => {
+                state.push({
+                    id: el.id,
+                    x: parseFloat(el.style.left),
+                    y: parseFloat(el.style.top)
+                });
+            });
+            return state;
+        }
+
+        function saveCurrentStateAsFrame(isReset = false) {
+            if (isReset) {
+                frames = [];
+            }
+            frames.push(getCurrentState());
+            updateUI();
+        }
+
+        function renderDots() {
+            dotsContainer.innerHTML = '';
+            frames.forEach((_, i) => {
+                const dot = document.createElement('div');
+                dot.className = `dot ${i === frames.length - 1 ? 'active' : ''}`;
+                dotsContainer.appendChild(dot);
+            });
+        }
+
+        function updateUI() {
+            renderDots();
+            playBtn.disabled = frames.length <= 1;
+            timelineInfo.innerText = `Кадр ${frames.length}/${frames.length}`;
+            timelineInfo.classList.add('visible');
+            setTimeout(() => timelineInfo.classList.remove('visible'), 2000);
+        }
+
+        function applyFrame(frameIndex) {
+            if (!frames[frameIndex]) return;
+            const state = frames[frameIndex];
+
+            state.forEach(data => {
+                const el = document.getElementById(data.id);
+                if (el) {
+                    el.style.left = `${data.x}%`;
+                    el.style.top = `${data.y}%`;
+                }
+            });
+
+            // Обновляем точки
+            document.querySelectorAll('.dot').forEach((dot, i) => {
+                dot.className = `dot ${i === frameIndex ? 'active' : ''}`;
+            });
+            timelineInfo.innerText = `Кадр ${frameIndex + 1}/${frames.length}`;
+            timelineInfo.classList.add('visible');
+        }
+
+        async function playTimeline() {
+            if (frames.length <= 1 || isPlaying) return;
+            isPlaying = true;
+
+            // Возвращаемся в начало без плавной анимации
+            document.querySelectorAll('.entity').forEach(el => el.classList.add('dragging'));
+            applyFrame(0);
+
+            // Небольшая пауза перед стартом
+            await new Promise(r => setTimeout(r, 50));
+            document.querySelectorAll('.entity').forEach(el => el.classList.remove('dragging'));
+
+            // Проигрываем кадры
+            for (let i = 1; i < frames.length; i++) {
+                await new Promise(r => setTimeout(r, 600)); // Пауза между шагами
+                applyFrame(i);
+            }
+
+            setTimeout(() => {
+                isPlaying = false;
+                timelineInfo.classList.remove('visible');
+            }, 1000);
+        }
+
+        // --- Drag and Drop ---
+        let activeEntity = null;
+
+        board.addEventListener('pointerdown', (e) => {
+            if (isPlaying) return; // Блокируем движение во время проигрывания
+            const target = e.target.closest('.entity');
+            if (!target) return;
+
+            activeEntity = target;
+            activeEntity.style.zIndex = 1000;
+            activeEntity.classList.add('dragging'); // Отключаем плавность CSS при драге
+        });
+
+        document.addEventListener('pointermove', (e) => {
+            if (!activeEntity || isPlaying) return;
+
+            const boardRect = board.getBoundingClientRect();
+            let x = e.clientX - boardRect.left;
+            let y = e.clientY - boardRect.top;
+
+            x = Math.max(0, Math.min(x, boardRect.width));
+            y = Math.max(0, Math.min(y, boardRect.height));
+
+            const pctX = (x / boardRect.width) * 100;
+            const pctY = (y / boardRect.height) * 100;
+
+            activeEntity.style.left = `${pctX}%`;
+            activeEntity.style.top = `${pctY}%`;
+        });
+
+        document.addEventListener('pointerup', () => {
+            if (activeEntity) {
+                activeEntity.style.zIndex = activeEntity.classList.contains('ball') ? 110 : 100;
+                activeEntity.classList.remove('dragging');
+                activeEntity = null;
+            }
+        });
+
+        // --- Слушатели ---
+        document.getElementById('resetBtn').addEventListener('click', initBoard);
+
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            if (isPlaying) return;
+            saveCurrentStateAsFrame();
+
+            const btn = document.getElementById('saveBtn');
+            btn.style.background = '#10b981';
+            setTimeout(() => btn.style.background = '', 500);
+        });
+
+        document.getElementById('playBtn').addEventListener('click', playTimeline);
+
+        // Инициализация при старте
+        initBoard();
+
+    </script>
+</body>
+
+</html>
