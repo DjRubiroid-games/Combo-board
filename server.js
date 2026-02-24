@@ -90,6 +90,17 @@ app.get('/api/combos', async (req, res) => {
     }
 });
 
+// Удалить комбинацию
+app.delete('/api/combos/:id', async (req, res) => {
+    try {
+        await Combo.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Ошибка удаления:', error);
+        res.status(500).json({ success: false, error: 'Ошибка удаления' });
+    }
+});
+
 // ----------- ЗАПУСК СЕРВЕРА -----------
 
 const PORT = process.env.PORT || 3000;

@@ -615,13 +615,39 @@
                     data.combos.forEach(c => {
                         const div = document.createElement('div');
                         div.className = 'combo-item';
-                        div.innerHTML = `<div><div class="combo-title">${c.name}</div><div class="combo-author">От: ${c.author}</div></div>`;
-                        div.onclick = () => {
+
+                        const infoDiv = document.createElement('div');
+                        infoDiv.style.flex = "1";
+                        infoDiv.innerHTML = `<div class="combo-title">${c.name}</div><div class="combo-author">От: ${c.author}</div>`;
+                        infoDiv.onclick = () => {
                             frames = c.frames;
                             updateUI();
                             loadModal.style.display = 'none';
                             applyFrame(0); // Показываем первую позицию комбинации
                         };
+
+                        const delBtn = document.createElement('div');
+                        delBtn.innerHTML = '🗑️';
+                        delBtn.style.padding = '0 10px';
+                        delBtn.style.fontSize = '1.2rem';
+                        delBtn.onclick = async (e) => {
+                            e.stopPropagation(); // Не запускаем проигрывание при нажатии на корзину
+                            if (confirm(`Удалить комбинацию "${c.name}"?`)) {
+                                try {
+                                    // Удаляем через API
+                                    const delRes = await fetch(`${fetchUrl}/${c._id}`, { method: 'DELETE' });
+                                    const delData = await delRes.json();
+                                    if (delData.success) {
+                                        div.remove(); // Убираем из списка на экране
+                                    }
+                                } catch (err) {
+                                    alert('Ошибка при удалении!');
+                                }
+                            }
+                        };
+
+                        div.appendChild(infoDiv);
+                        div.appendChild(delBtn);
                         comboListDiv.appendChild(div);
                     });
                 }
