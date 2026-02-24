@@ -12,9 +12,40 @@ app.use(express.json());
 // Отдаем index.html как фронтенд
 app.use(express.static(path.join(__dirname)));
 
-// В телеграме берем токен, который написал пользователь
-const BOT_TOKEN = process.env.BOT_TOKEN || '8509353993:AAG4zxgGneMg-w7yK-em_faumFaxkFWwBAI';
-const bot = new Telegraf(BOT_TOKEN);
+// В телеграме берем токен из секретных переменных (никогда не храним в коде!)
+const BOT_TOKEN = process.env.BOT_TOKEN;
+if (!BOT_TOKEN) {
+    console.error('⚠️ ВНИМАНИЕ: BOT_TOKEN не задан! Бот не запустится.');
+} else {
+    const bot = new Telegraf(BOT_TOKEN);
+
+    // ----------- НАСТРОЙКА БОТА -----------
+    bot.start((ctx) => {
+        ctx.reply(
+            'Привет! Я система тактической доски для команды. 🏀\n\n' +
+            'Открой мини-приложение, чтобы рисовать или просматривать комбинации:',
+            {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{
+                            text: '🏀 Открыть доску',
+                            web_app: {
+                                url: process.env.WEBAPP_URL || 'https://djrubiroid-games.github.io/Combo-board/'
+                            }
+                        }]
+                    ]
+                }
+            }
+        );
+    });
+
+    // Запускаем бота, если есть токен
+    bot.launch().then(() => console.log('🤖 Telegram-бот запущен'));
+
+    // Корректная остановка
+    process.once('SIGINT', () => bot.stop('SIGINT'));
+    process.once('SIGTERM', () => bot.stop('SIGTERM'));
+}
 
 // Схема для базы данных (комбинаций)
 const comboSchema = new mongoose.Schema({
@@ -51,28 +82,6 @@ app.get('/api/combos', async (req, res) => {
     }
 });
 
-// ----------- НАСТРОЙКА БОТА -----------
-
-bot.start((ctx) => {
-    ctx.reply(
-        'Привет! Я система тактической доски для команды. 🏀\n\n' +
-        'Открой мини-приложение, чтобы рисовать или просматривать комбинации:', 
-        {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ 
-                        text: '🏀 Открыть доску', 
-                        web_app: { 
-                            // Позже тут будет ссылка на Render
-                            url: process.env.WEBAPP_URL || 'https://djrubiroid-games.github.io/Combo-board/' 
-                        } 
-                    }]
-                ]
-            }
-        }
-    );
-});
-
 // ----------- ЗАПУСК СЕРВЕРА -----------
 
 const PORT = process.env.PORT || 3000;
@@ -86,15 +95,9 @@ mongoose.connect(MONGODB_URI || 'mongodb://localhost/tacboard_db')
     .then(() => {
         console.log('✅ Подключено к MongoDB');
         app.listen(PORT, () => console.log(`🚀 Сервер (веб/API) запущен на порту ${PORT}`));
-        bot.launch().then(() => console.log('🤖 Telegram-бот запущен'));
     })
     .catch(err => {
         console.error('❌ Ошибка подключения БД:', err.message);
         // Fallback-запуск без базы данных (чтобы фронт все равно работал локально)
         app.listen(PORT, () => console.log(`🚀 (Local Fallback) Сервер запущен на порту ${PORT}`));
-        bot.launch().then(() => console.log('🤖 Telegram-бот запущен'));
     });
-
-// Корректная остановка
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
