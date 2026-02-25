@@ -114,6 +114,37 @@
             /* Убираем анимацию при перетаскивании */
         }
 
+        .screen-indicator {
+            position: absolute;
+            width: 4px;
+            height: 30px;
+            background-color: #f1f5f9;
+            /* Бело-серый цвет заслона */
+            top: 50%;
+            left: 50%;
+            transform-origin: 50% 0;
+            /* Вращение вокруг центра игрока */
+            z-index: -1;
+            pointer-events: none;
+            display: none;
+            border-radius: 2px;
+        }
+
+        .screen-indicator::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 4px;
+            background-color: inherit;
+            bottom: 0;
+            left: -11px;
+            border-radius: 2px;
+        }
+
+        .entity.has-screen .screen-indicator {
+            display: block;
+        }
+
         .entity:active {
             cursor: grabbing;
             transform: translate(-50%, -50%) scale(1.15);
@@ -482,7 +513,9 @@
                 state.push({
                     id: el.id,
                     x: parseFloat(el.style.left),
-                    y: parseFloat(el.style.top)
+                    y: parseFloat(el.style.top),
+                    hasScreen: el.classList.contains('has-screen'),
+                    screenAngle: el.dataset.screenAngle || 0
                 });
             });
             return state;
@@ -522,6 +555,20 @@
                 if (el) {
                     el.style.left = `${data.x}%`;
                     el.style.top = `${data.y}%`;
+
+                    if (data.hasScreen) {
+                        el.classList.add('has-screen');
+                        el.dataset.screenAngle = data.screenAngle;
+                        let indicator = el.querySelector('.screen-indicator');
+                        if (!indicator) {
+                            indicator = document.createElement('div');
+                            indicator.className = 'screen-indicator';
+                            el.appendChild(indicator);
+                        }
+                        indicator.style.transform = `rotate(${data.screenAngle}deg)`;
+                    } else {
+                        el.classList.remove('has-screen');
+                    }
                 }
             });
 
@@ -559,6 +606,55 @@
 
         // --- Drag and Drop ---
         let activeEntity = null;
+        let lastTapTime = 0;
+        let lastTapEntity = null;
+
+        function toggleScreen(entity) {
+            let indicator = entity.querySelector('.screen-indicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.className = 'screen-indicator';
+                entity.appendChild(indicator);
+            }
+
+            if (entity.classList.contains('has-screen')) {
+                entity.classList.remove('has-screen');
+                entity.dataset.screenAngle = 0;
+            } else {
+                // Ищем ближайшего союзника (не мяч)
+                const friends = Array.from(document.querySelectorAll('.entity:not(.ball)')).filter(el => el !== entity);
+
+                if (friends.length > 0) {
+                    let nearest = friends[0];
+                    let minDist = Infinity;
+                    const r1 = entity.getBoundingClientRect();
+                    const eX = r1.left + r1.width / 2;
+                    const eY = r1.top + r1.height / 2;
+
+                    friends.forEach(f => {
+                        const r2 = f.getBoundingClientRect();
+                        const fX = r2.left + r2.width / 2;
+                        const fY = r2.top + r2.height / 2;
+                        const dist = Math.hypot(eX - fX, eY - fY);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearest = f;
+                        }
+                    });
+
+                    const r2 = nearest.getBoundingClientRect();
+                    const nX = r2.left + r2.width / 2;
+                    const nY = r2.top + r2.height / 2;
+
+                    // Вычисляем угол поворота (0 градусов - это вектор вниз, т.к. transform-origin: 50% 0)
+                    let angle = Math.atan2(nY - eY, nX - eX) * (180 / Math.PI) - 90;
+
+                    indicator.style.transform = `rotate(${angle}deg)`;
+                    entity.classList.add('has-screen');
+                    entity.dataset.screenAngle = angle;
+                }
+            }
+        }
 
         board.addEventListener('pointerdown', (e) => {
             if (e.cancelable) e.preventDefault(); // Запрещаем скролл браузера по нажатию
@@ -570,6 +666,17 @@
             activeEntity = target;
             activeEntity.style.zIndex = 1000;
             activeEntity.classList.add('dragging'); // Отключаем плавность CSS при драге
+
+            // Обработка двойного тапа (заслон)
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+            if (tapLength < 300 && lastTapEntity === activeEntity && activeEntity.id !== 'ball') {
+                toggleScreen(activeEntity);
+                lastTapTime = 0; // Сбрасываем, чтобы не было тройных срабатываний
+            } else {
+                lastTapTime = currentTime;
+            }
+            lastTapEntity = activeEntity;
 
             // Если потянули за игрока, проверим, есть ли рядом с ним мяч
             if (activeEntity.id !== 'ball') {
