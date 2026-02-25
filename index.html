@@ -76,7 +76,8 @@
         #board {
             background-color: var(--court-bg);
             position: relative;
-            overflow: hidden;
+            overflow: visible;
+            /* Разрешаем фишкам выходить за пределы площадки */
             border-radius: 4px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             touch-action: none;
@@ -600,8 +601,9 @@
             let x = e.clientX - boardRect.left;
             let y = e.clientY - boardRect.top;
 
-            x = Math.max(0, Math.min(x, boardRect.width));
-            y = Math.max(0, Math.min(y, boardRect.height));
+            // Позволяем заходить за границу на 15% для расстановки игроков из-за боковой (аут)
+            x = Math.max(-boardRect.width * 0.15, Math.min(x, boardRect.width * 1.15));
+            y = Math.max(-boardRect.height * 0.15, Math.min(y, boardRect.height * 1.15));
 
             const pctX = (x / boardRect.width) * 100;
             const pctY = (y / boardRect.height) * 100;
