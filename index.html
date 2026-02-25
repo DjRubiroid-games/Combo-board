@@ -549,6 +549,27 @@
             activeEntity = target;
             activeEntity.style.zIndex = 1000;
             activeEntity.classList.add('dragging'); // Отключаем плавность CSS при драге
+
+            // Если потянули за игрока, проверим, есть ли рядом с ним мяч
+            if (activeEntity.id !== 'ball') {
+                const ball = document.getElementById('ball');
+                if (ball) {
+                    const pX = parseFloat(activeEntity.style.left);
+                    const pY = parseFloat(activeEntity.style.top);
+                    const bX = parseFloat(ball.style.left);
+                    const bY = parseFloat(ball.style.top);
+
+                    const dist = Math.hypot(pX - bX, pY - bY);
+                    if (dist <= 7) { // Порог "прилипания" ~7% от ширины экрана
+                        activeEntity.hasBall = true;
+                        activeEntity.ballOffsetX = bX - pX;
+                        activeEntity.ballOffsetY = bY - pY;
+                        ball.classList.add('dragging'); // Отключаем плавность движения и для мяча
+                    } else {
+                        activeEntity.hasBall = false;
+                    }
+                }
+            }
         }, { passive: false });
 
         document.addEventListener('pointermove', (e) => {
@@ -567,12 +588,28 @@
 
             activeEntity.style.left = `${pctX}%`;
             activeEntity.style.top = `${pctY}%`;
+
+            // Если игрок "владеет" мячом, двигаем мячик вместе с ним
+            if (activeEntity.hasBall) {
+                const ball = document.getElementById('ball');
+                if (ball) {
+                    ball.style.left = `${pctX + activeEntity.ballOffsetX}%`;
+                    ball.style.top = `${pctY + activeEntity.ballOffsetY}%`;
+                }
+            }
         });
 
         document.addEventListener('pointerup', () => {
             if (activeEntity) {
                 activeEntity.style.zIndex = activeEntity.classList.contains('ball') ? 110 : 100;
                 activeEntity.classList.remove('dragging');
+
+                if (activeEntity.hasBall) {
+                    const ball = document.getElementById('ball');
+                    if (ball) ball.classList.remove('dragging');
+                    activeEntity.hasBall = false;
+                }
+
                 activeEntity = null;
             }
         });
