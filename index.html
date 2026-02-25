@@ -33,7 +33,12 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            width: 100vw;
             overflow: hidden;
+            position: fixed;
+            /* Предотвращаем скролл на iOS/Android */
+            touch-action: none;
+            /* Запрет пинч-зума и скролла */
         }
 
         header {
@@ -61,11 +66,14 @@
             justify-content: center;
             padding: 10px;
             position: relative;
+            background: var(--court-bg);
         }
 
         #board {
             width: 100%;
-            max-width: 500px;
+            height: 100%;
+            max-width: 800px;
+            max-height: 800px;
             aspect-ratio: 15 / 14;
             background-color: var(--court-bg);
             position: relative;
@@ -73,6 +81,7 @@
             border-radius: 4px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             touch-action: none;
+            /* Выключаем дефолтные жесты (скролл листанием) */
         }
 
         #court-svg {
@@ -401,15 +410,10 @@
         const timelineInfo = document.getElementById('timelineInfo');
 
         const startPositions = {
-            teamA: [ // Белые (защита)
+            teamA: [ // Светлые (нападение)
                 { id: 'a1', num: 1, x: 50, y: 55 }, { id: 'a2', num: 2, x: 78, y: 40 },
                 { id: 'a3', num: 3, x: 20, y: 38 }, { id: 'a4', num: 4, x: 75, y: 10 },
                 { id: 'a5', num: 5, x: 28, y: 10 }
-            ],
-            teamB: [ // Темно-синие (нападение)
-                { id: 'b1', num: 1, x: 50, y: 65 }, { id: 'b2', num: 2, x: 85, y: 50 },
-                { id: 'b3', num: 3, x: 15, y: 50 }, { id: 'b4', num: 4, x: 92, y: 10 },
-                { id: 'b5', num: 5, x: 30, y: 20 }
             ],
             ball: { id: 'ball', x: 54, y: 66 }
         };
@@ -433,7 +437,6 @@
         function initBoard() {
             document.querySelectorAll('.entity').forEach(el => el.remove());
             startPositions.teamA.forEach(p => createEntity(p, 'team-a'));
-            startPositions.teamB.forEach(p => createEntity(p, 'team-b'));
             createEntity(startPositions.ball, 'ball');
 
             // Сбрасываем таймлайн
@@ -527,6 +530,8 @@
         let activeEntity = null;
 
         board.addEventListener('pointerdown', (e) => {
+            if (e.cancelable) e.preventDefault(); // Запрещаем скролл браузера по нажатию
+
             if (isPlaying) return; // Блокируем движение во время проигрывания
             const target = e.target.closest('.entity');
             if (!target) return;
@@ -534,10 +539,11 @@
             activeEntity = target;
             activeEntity.style.zIndex = 1000;
             activeEntity.classList.add('dragging'); // Отключаем плавность CSS при драге
-        });
+        }, { passive: false });
 
         document.addEventListener('pointermove', (e) => {
             if (!activeEntity || isPlaying) return;
+            if (e.cancelable) e.preventDefault(); // Запрещаем скролл браузера при ведении пальцем
 
             const boardRect = board.getBoundingClientRect();
             let x = e.clientX - boardRect.left;
