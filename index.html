@@ -74,11 +74,6 @@
         }
 
         #board {
-            aspect-ratio: 15 / 14;
-            width: auto;
-            height: auto;
-            max-width: 100%;
-            max-height: 100%;
             background-color: var(--court-bg);
             position: relative;
             overflow: hidden;
@@ -443,6 +438,31 @@
             board.appendChild(el);
             return el;
         }
+
+        // --- Подгонка доски по экрану ---
+        function resizeBoard() {
+            const container = document.querySelector('.board-container');
+            const cWidth = container.clientWidth;
+            const cHeight = container.clientHeight;
+
+            const targetRatio = 15 / 14;
+            const containerRatio = cWidth / cHeight;
+
+            if (containerRatio > targetRatio) {
+                // Экран шире, чем нужно (горизонтальная ориентация) -> упираемся в высоту
+                board.style.height = `${cHeight}px`;
+                board.style.width = `${cHeight * targetRatio}px`;
+            } else {
+                // Экран выше, чем нужно (вертикальная) -> упираемся в ширину
+                board.style.width = `${cWidth}px`;
+                board.style.height = `${cWidth / targetRatio}px`;
+            }
+        }
+        window.addEventListener('resize', resizeBoard);
+        // Запуск при старте для правильного размера
+        resizeBoard();
+        // В Telegram иногда высота подгружается с задержкой, поэтому на всякий случай еще один вызов
+        setTimeout(resizeBoard, 100);
 
         function initBoard() {
             document.querySelectorAll('.entity').forEach(el => el.remove());
