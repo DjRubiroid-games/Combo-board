@@ -105,7 +105,7 @@
             font-size: 14px;
             cursor: grab;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            transition: left 0.5s ease-in-out, top 0.5s ease-in-out, transform 0.1s;
+            transition: left 1.5s ease-in-out, top 1.5s ease-in-out, transform 0.1s;
             z-index: 100;
             transform: translate(-50%, -50%);
         }
@@ -411,11 +411,11 @@
 
         const startPositions = {
             teamA: [ // Светлые (нападение)
-                { id: 'a1', num: 1, x: 50, y: 55 }, { id: 'a2', num: 2, x: 78, y: 40 },
-                { id: 'a3', num: 3, x: 20, y: 38 }, { id: 'a4', num: 4, x: 75, y: 10 },
-                { id: 'a5', num: 5, x: 28, y: 10 }
+                { id: 'a1', num: 1, x: 50, y: 62 }, { id: 'a2', num: 2, x: 85, y: 50 },
+                { id: 'a3', num: 3, x: 15, y: 50 }, { id: 'a4', num: 4, x: 70, y: 15 },
+                { id: 'a5', num: 5, x: 30, y: 15 }
             ],
-            ball: { id: 'ball', x: 54, y: 66 }
+            ball: { id: 'ball', x: 52, y: 65 }
         };
 
         let frames = []; // Массив сохраненных кадров
@@ -516,7 +516,7 @@
 
             // Проигрываем кадры
             for (let i = 1; i < frames.length; i++) {
-                await new Promise(r => setTimeout(r, 600)); // Пауза между шагами
+                await new Promise(r => setTimeout(r, 1600)); // Задержка между шагами (чуть больше CSS транзиции)
                 applyFrame(i);
             }
 
