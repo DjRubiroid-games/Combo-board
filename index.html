@@ -632,16 +632,30 @@
                         delBtn.style.fontSize = '1.2rem';
                         delBtn.onclick = async (e) => {
                             e.stopPropagation(); // Не запускаем проигрывание при нажатии на корзину
-                            if (confirm(`Удалить комбинацию "${c.name}"?`)) {
+
+                            const executeDelete = async () => {
                                 try {
-                                    // Удаляем через API
                                     const delRes = await fetch(`${fetchUrl}/${c._id}`, { method: 'DELETE' });
                                     const delData = await delRes.json();
                                     if (delData.success) {
-                                        div.remove(); // Убираем из списка на экране
+                                        div.remove();
+                                    } else {
+                                        if (tg && tg.showAlert) tg.showAlert('Ошибка на сервере');
+                                        else alert('Ошибка на сервере');
                                     }
                                 } catch (err) {
-                                    alert('Ошибка при удалении!');
+                                    if (tg && tg.showAlert) tg.showAlert('База недоступна или спит. Попробуйте снова через 10 секунд!');
+                                    else alert('Ошибка при удалении!');
+                                }
+                            };
+
+                            if (tg && tg.showConfirm) {
+                                tg.showConfirm(`Удалить комбинацию "${c.name}"?`, (confirmDelete) => {
+                                    if (confirmDelete) executeDelete();
+                                });
+                            } else {
+                                if (confirm(`Удалить комбинацию "${c.name}"?`)) {
+                                    executeDelete();
                                 }
                             }
                         };
